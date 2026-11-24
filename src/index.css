@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* ---------- Base ---------- */
+:root {
+    color-scheme: light;
+}
+
+html {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html[lang="fa"] {
+    font-family: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: #f8fafc;
+    /* slate-50 */
+    color: #0f172a;
+    /* slate-900 */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* ---------- Scrollbars (desktop feel) ---------- */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    /* slate-300 */
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+    /* slate-400 */
+}
+
+/* ---------- Toast entrance ---------- */
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-toast-in {
+    animation: toast-in 0.2s ease-out;
+}
