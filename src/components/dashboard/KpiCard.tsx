@@ -8,14 +8,14 @@ interface KpiCardProps {
 
 export default function KpiCard({ icon: Icon, label, value }: KpiCardProps) {
     return (
-        <div className="rounded-lg border border-zinc-200 bg-white p-4">
+        <div className="min-w-0 rounded-lg border border-zinc-200 bg-white p-4">
             <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
                     <Icon size={15} />
                 </div>
-                <span className="caps text-xs font-medium text-zinc-500">{label}</span>
+                <span className="caps min-w-0 text-xs font-medium text-zinc-500">{label}</span>
             </div>
-            <p className="mt-3 text-2xl font-semibold tabular-nums text-zinc-900">{value}</p>
+            <p className="mt-3 break-words text-2xl font-semibold tabular-nums text-zinc-900">{value}</p>
         </div>
     );
 }

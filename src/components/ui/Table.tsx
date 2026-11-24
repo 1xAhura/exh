@@ -19,8 +19,10 @@ export function TableShell({
 }: TableShellProps) {
     const tableStyle = minWidth ? { minWidth } : undefined;
     if (plain) {
+        // Plain tables live inside cards: overflow must be contained here so it
+        // can never propagate to the page-level scroll container.
         return (
-            <div className={className}>
+            <div className={`min-w-0 overflow-x-auto ${className}`}>
                 <table className="data-table" style={tableStyle}>
                     {children}
                 </table>
@@ -28,7 +30,10 @@ export function TableShell({
         );
     }
     return (
-        <div className={`overflow-auto rounded-lg border border-zinc-200 bg-white ${className}`} style={{ maxHeight }}>
+        <div
+            className={`min-w-0 overflow-auto rounded-lg border border-zinc-200 bg-white ${className}`}
+            style={{ maxHeight }}
+        >
             <table className="data-table data-table-scroll" style={tableStyle}>
                 {children}
             </table>

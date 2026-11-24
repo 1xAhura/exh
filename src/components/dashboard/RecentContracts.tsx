@@ -16,7 +16,7 @@ export default function RecentContracts({ contracts }: RecentContractsProps) {
     const { t, locale } = useLanguage();
     const { data } = useData();
     return (
-        <section className="flex flex-col rounded-lg border border-zinc-200 bg-white">
+        <section className="flex min-w-0 flex-col rounded-lg border border-zinc-200 bg-white">
             <header className="border-b border-zinc-200 px-4 py-4">
                 <h2 className="text-sm font-semibold text-zinc-900">{t("dashboard.recentContracts")}</h2>
             </header>
@@ -41,8 +41,12 @@ export default function RecentContracts({ contracts }: RecentContractsProps) {
                                 <Td>
                                     <bdi>{contract.contract_number}</bdi>
                                 </Td>
-                                <Td>{carNameForItem(data.items, data.cars, contract.inventory_item_id) || "—"}</Td>
-                                <Td numeric className="text-zinc-900">
+                                {/* Long names wrap instead of widening the table; the TableShell
+                    wrapper is the backstop if the row still exceeds the card. */}
+                                <Td className="whitespace-normal break-words">
+                                    {carNameForItem(data.items, data.cars, contract.inventory_item_id) || "—"}
+                                </Td>
+                                <Td numeric className="whitespace-nowrap text-zinc-900">
                                     {formatMoney(contract.price, locale)}
                                 </Td>
                             </tr>
