@@ -1,56 +1,133 @@
 @import "tailwindcss";
 
-/* ---------- Base ---------- */
-:root {
-    color-scheme: light;
+/* ── Design tokens (§2 of the spec) ──────────────────────────────────── */
+@theme {
+    --font-sans: "Inter Variable", "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
+    --color-primary: #155e75;
+    /* cyan-800 — accent */
+    --color-primary-hover: #0e7490;
+    /* cyan-700 */
+    --color-primary-soft: #ecfeff;
+    /* cyan-50 */
+
+    /* Sidebar collapses to an icon-only rail below ~1100px (§2.1). */
+    --breakpoint-xl: 1100px;
 }
 
-html {
-    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+/* Placed in @layer base so Tailwind utilities can still override
+   individual properties on specific cells (e.g. text-zinc-900). */
+@layer base {
+
+    html,
+    body,
+    #root {
+        height: 100%;
+    }
+
+    body {
+        @apply bg-zinc-50 font-sans text-zinc-900 antialiased;
+        line-height: 1.6;
+    }
+
+    /* Persian: Vazirmatn first + looser line-height (§3.3). */
+    html[lang="fa"] body {
+        font-family: "Vazirmatn Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+        line-height: 1.85;
+    }
+
+    /* Small uppercase caption labels. Letter-spacing must be disabled for
+     Persian — it breaks the connected Arabic-script glyph joining. */
+    .caps {
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    html[lang="fa"] .caps {
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    /* ── Data tables (styled via components/ui/Table.tsx) ── */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .data-table th {
+        padding: 0.625rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-zinc-500);
+        background-color: var(--color-zinc-50);
+        border-bottom: 1px solid var(--color-zinc-200);
+        white-space: nowrap;
+    }
+
+    html[lang="fa"] .data-table th {
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    /* Sticky header row — only inside the scrollable table shell. */
+    .data-table-scroll th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .data-table td {
+        padding: 0.625rem 1rem;
+        color: var(--color-zinc-600);
+        border-bottom: 1px solid var(--color-zinc-100);
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .data-table tbody tr:hover {
+        background-color: var(--color-zinc-50);
+    }
+
+    /* Slim, quiet scrollbars for the desktop webview. */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-zinc-300) transparent;
+    }
 }
 
-html[lang="fa"] {
-    font-family: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+/* ── Motion: modal fade/scale-in + toast slide-in (§2.3 — nothing else) ─ */
+@keyframes overlay-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
-body {
-    margin: 0;
-    background-color: #f8fafc;
-    /* slate-50 */
-    color: #0f172a;
-    /* slate-900 */
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+@keyframes panel-in {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
-/* ---------- Scrollbars (desktop feel) ---------- */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    /* slate-300 */
-    border-radius: 8px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8;
-    /* slate-400 */
-}
-
-/* ---------- Toast entrance ---------- */
 @keyframes toast-in {
     from {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(6px);
     }
 
     to {
@@ -59,6 +136,14 @@ body {
     }
 }
 
-.animate-toast-in {
-    animation: toast-in 0.2s ease-out;
+.modal-overlay {
+    animation: overlay-in 150ms ease-out;
+}
+
+.modal-panel {
+    animation: panel-in 150ms ease-out;
+}
+
+.toast-in {
+    animation: toast-in 180ms ease-out;
 }

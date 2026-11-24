@@ -1,20 +1,57 @@
-import { useState } from 'react';
-import { AppLayout } from './components/layout/AppLayout';
-import { DashboardPage } from './pages/DashboardPage';
-import { ContractsPage } from './pages/ContractsPage';
-import { AddContractPage } from './pages/AddContractPage';
-import { SettingsPage } from './pages/SettingsPage';
-import type { Page } from './types/navigation';
+import { useCallback, useState } from "react";
+import Shell from "./components/layout/Shell";
+import { DataProvider } from "./context/DataContext";
+import { LanguageProvider } from "./context/LanguageContext";
+import { ToastProvider } from "./context/ToastContext";
+import AgreementsPage from "./pages/AgreementsPage";
+import ContractsPage from "./pages/ContractsPage";
+import DashboardPage from "./pages/DashboardPage";
+import InventoryPage from "./pages/InventoryPage";
+import PeoplePage from "./pages/PeoplePage";
+import SettingsPage from "./pages/SettingsPage";
+import type { ModalIntent, PageId } from "./types/nav";
+
+function AppContent() {
+    const [page, setPage] = useState<PageId>("dashboard");
+    const [intent, setIntent] = useState<ModalIntent | null>(null);
+
+    const navigate = useCallback((next: PageId, nextIntent?: ModalIntent) => {
+        setIntent(nextIntent ?? null);
+        setPage(next);
+    }, []);
+
+    const clearIntent = useCallback(() => setIntent(null), []);
+
+    return (
+        <Shell page={page} onNavigate={(next) => navigate(next)}>
+            {page === "dashboard" && (
+                <DashboardPage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
+            )}
+            {page === "inventory" && (
+                <InventoryPage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
+            )}
+            {page === "people" && (
+                <PeoplePage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
+            )}
+            {page === "contracts" && (
+                <ContractsPage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
+            )}
+            {page === "agreements" && (
+                <AgreementsPage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
+            )}
+            {page === "settings" && <SettingsPage />}
+        </Shell>
+    );
+}
 
 export default function App() {
-  const [page, setPage] = useState<Page>('dashboard');
-
-  return (
-    <AppLayout currentPage={page} onNavigate={setPage}>
-      {page === 'dashboard' && <DashboardPage onNavigate={setPage} />}
-      {page === 'contracts' && <ContractsPage onNavigate={setPage} />}
-      {page === 'add-contract' && <AddContractPage onNavigate={setPage} />}
-      {page === 'settings' && <SettingsPage />}
-    </AppLayout>
-  );
+    return (
+        <LanguageProvider>
+            <ToastProvider>
+                <DataProvider>
+                    <AppContent />
+                </DataProvider>
+            </ToastProvider>
+        </LanguageProvider>
+    );
 }

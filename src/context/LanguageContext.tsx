@@ -1,50 +1,57 @@
-import { createContext, useContext, useLayoutEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { translations } from '../i18n';
-import type { Language, Translation } from '../i18n';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { dictionaries, translate } from "../i18n";
+import type { Locale, TKey } from "../i18n";
 
-const STORAGE_KEY = 'car-exhibition-language';
+const STORAGE_KEY = "app-locale";
 
 interface LanguageContextValue {
-    language: Language;
-    isRTL: boolean;
-    setLanguage: (language: Language) => void;
-    t: Translation;
+    locale: Locale;
+    setLocale: (locale: Locale) => void;
+    t: (key: TKey, params?: Record<string, string>) => string;
 }
 
-const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function getInitialLanguage(): Language {
-    if (typeof window === 'undefined') return 'en';
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return saved === 'fa' || saved === 'en' ? saved : 'en';
+function readStoredLocale(): Locale {
+    try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored === "en" || stored === "fa") return stored;
+    } catch {
+        // localStorage unavailable — fall back to English
+    }
+    return "en";
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguage] = useState<Language>(getInitialLanguage);
+    const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
 
-    // Applied in a layout effect so direction/language are set before first paint
-    // and the whole UI flips instantly on switch (no restart required).
-    useLayoutEffect(() => {
-        const root = document.documentElement;
-        root.lang = language;
-        root.dir = language === 'fa' ? 'rtl' : 'ltr';
-        document.title = translations[language].appTitle;
-        window.localStorage.setItem(STORAGE_KEY, language);
-    }, [language]);
+    useEffect(() => {
+        document.documentElement.lang = locale;
+        document.documentElement.dir = locale === "fa" ? "rtl" : "ltr";
+    }, [locale]);
 
-    const value = useMemo<LanguageContextValue>(
-        () => ({ language, isRTL: language === 'fa', setLanguage, t: translations[language] }),
-        [language, setLanguage],
+    const setLocale = useCallback((next: Locale) => {
+        setLocaleState(next);
+        try {
+            window.localStorage.setItem(STORAGE_KEY, next);
+        } catch {
+            // ignore persistence failures
+        }
+    }, []);
+
+    const t = useCallback(
+        (key: TKey, params?: Record<string, string>) => translate(dictionaries[locale], key, params),
+        [locale],
     );
+
+    const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
     return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage(): LanguageContextValue {
-    const context = useContext(LanguageContext);
-    if (!context) {
-        throw new Error('useLanguage must be used within a LanguageProvider');
-    }
-    return context;
+    const ctx = useContext(LanguageContext);
+    if (!ctx) throw new Error("useLanguage must be used inside LanguageProvider");
+    return ctx;
 }

@@ -1,117 +1,126 @@
-import { PageHeader } from '../components/layout/PageHeader';
-import { StatCard } from '../components/dashboard/StatCard';
-import { QuickActions } from '../components/dashboard/QuickActions';
-import { ContractsTable } from '../components/contracts/ContractsTable';
-import { Button } from '../components/ui/Button';
-import { EmptyState } from '../components/ui/EmptyState';
-import { ErrorState } from '../components/ui/ErrorState';
-import { LoadingState } from '../components/ui/LoadingState';
-import { BanknoteIcon, CarIcon, DashboardIcon, PlusIcon, RefreshIcon, SettingsIcon } from '../components/ui/icons';
-import { useContracts } from '../hooks/useContracts';
-import { useLanguage } from '../context/LanguageContext';
-import { useToast } from '../context/ToastContext';
-import { detectCurrency, formatNumber, parsePriceAmount } from '../utils/format';
-import type { Page } from '../types/navigation';
+import { useMemo } from "react";
+import { Banknote, Car, Plus, ScrollText, UserPlus, Wallet } from "lucide-react";
+import PageHeader from "../components/layout/PageHeader";
+import KpiCard from "../components/dashboard/KpiCard";
+import NetProfitPanel from "../components/dashboard/NetProfitPanel";
+import RecentContracts from "../components/dashboard/RecentContracts";
+import { Button } from "../components/ui/Button";
+import { ErrorState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
+import { useData } from "../context/DataContext";
+import { useLanguage } from "../context/LanguageContext";
+import { computeNetProfitSummary } from "../utils/relations";
+import { formatMoney, formatNumber } from "../utils/format";
+import type { PageProps } from "../types/nav";
 
-interface DashboardPageProps {
-    onNavigate: (page: Page) => void;
-}
+export default function DashboardPage({ onNavigate }: PageProps) {
+    const { data, loading, error, refreshAll } = useData();
+    const { t, locale } = useLanguage();
 
-export function DashboardPage({ onNavigate }: DashboardPageProps) {
-    const { t, language } = useLanguage();
-    const { showToast } = useToast();
-    const { contracts, isLoading, hasError, refetch } = useContracts();
+    const kpis = useMemo(() => {
+        const inStock = data.items.filter((item) => item.status === "InStock").length;
+        const sold = data.items.filter((item) => item.status === "Sold").length;
+        const activeConsignments = data.agreements.filter((a) => a.status === "Active").length;
+        const contractValue = data.contracts.reduce((sum, contract) => sum + contract.price, 0);
+        return { inStock, sold, activeConsignments, contractValue };
+    }, [data]);
 
-    if (isLoading) {
+    const profit = useMemo(
+        () => computeNetProfitSummary(data.contracts, data.extraCosts, data.agreements),
+        [data],
+    );
+
+    const recent = useMemo(
+        () =>
+            [...data.contracts]
+                .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+                .slice(0, 5),
+        [data],
+    );
+
+    if (error) {
         return (
-            <>
-                <PageHeader title={t.dashboard.title} description={t.dashboard.subtitle} />
-                <LoadingState label={t.common.loading} />
-            </>
+            <div>
+                <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
+                <ErrorState detail={error} onRetry={refreshAll} />
+            </div>
         );
     }
 
-    if (hasError || contracts === null) {
+    if (loading) {
         return (
-            <>
-                <PageHeader title={t.dashboard.title} description={t.dashboard.subtitle} />
-                <ErrorState title={t.dashboard.loadError} onRetry={() => void refetch()} />
-            </>
+            <div>
+                <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
+                <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-lg border border-zinc-200 bg-white p-4">
+                            <Skeleton className="h-3 w-24" />
+                            <Skeleton className="mt-3 h-7 w-16" />
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="mt-3 h-8 w-44" />
+                        <Skeleton className="mt-6 h-28 w-full" />
+                    </div>
+                    <div className="rounded-lg border border-zinc-200 bg-white p-5">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="mt-4 h-3 w-full" />
+                        <Skeleton className="mt-3 h-3 w-full" />
+                        <Skeleton className="mt-3 h-3 w-2/3" />
+                    </div>
+                </div>
+            </div>
         );
     }
-
-    // Statistics are computed from the actual backend data.
-    const totalContracts = contracts.length;
-    const totalValue = contracts.reduce((sum, contract) => sum + parsePriceAmount(contract.price), 0);
-    const currency = detectCurrency(contracts);
-    const uniqueCarModels = new Set(contracts.map((contract) => contract.car.car_name)).size;
-    const totalValueLabel = `${formatNumber(totalValue, language)}${currency ? ` ${currency}` : ''}`;
-
-    const handleRefresh = async () => {
-        const succeeded = await refetch();
-        showToast(succeeded ? 'success' : 'error', succeeded ? t.dashboard.dataRefreshed : t.dashboard.loadError);
-    };
-
-    const actions = [
-        { label: t.dashboard.actionAdd, icon: <PlusIcon className="h-5 w-5" />, onClick: () => onNavigate('add-contract') },
-        { label: t.dashboard.actionView, icon: <CarIcon className="h-5 w-5" />, onClick: () => onNavigate('contracts') },
-        { label: t.dashboard.actionRefresh, icon: <RefreshIcon className="h-5 w-5" />, onClick: () => void handleRefresh() },
-        { label: t.dashboard.actionSettings, icon: <SettingsIcon className="h-5 w-5" />, onClick: () => onNavigate('settings') },
-    ];
 
     return (
-        <>
-            <PageHeader title={t.dashboard.title} description={t.dashboard.subtitle} />
+        <div>
+            <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <StatCard
-                    icon={<DashboardIcon className="h-5 w-5" />}
-                    label={t.dashboard.totalContracts}
-                    value={formatNumber(totalContracts, language)}
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+                <KpiCard icon={Car} label={t("dashboard.kpiInStock")} value={formatNumber(kpis.inStock, locale)} />
+                <KpiCard icon={Banknote} label={t("dashboard.kpiSold")} value={formatNumber(kpis.sold, locale)} />
+                <KpiCard
+                    icon={ScrollText}
+                    label={t("dashboard.kpiActiveConsignments")}
+                    value={formatNumber(kpis.activeConsignments, locale)}
                 />
-                <StatCard
-                    icon={<BanknoteIcon className="h-5 w-5" />}
-                    label={t.dashboard.totalValue}
-                    value={totalValueLabel}
-                />
-                <StatCard
-                    icon={<CarIcon className="h-5 w-5" />}
-                    label={t.dashboard.uniqueCars}
-                    value={formatNumber(uniqueCarModels, language)}
+                <KpiCard
+                    icon={Wallet}
+                    label={t("dashboard.kpiContractValue")}
+                    value={formatMoney(kpis.contractValue, locale)}
                 />
             </div>
 
-            <section className="mt-8">
-                <h2 className="mb-3 text-sm font-semibold text-slate-900">{t.dashboard.quickActions}</h2>
-                <QuickActions actions={actions} />
-            </section>
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <NetProfitPanel total={profit.total} months={profit.months} />
+                <RecentContracts contracts={recent} />
+            </div>
 
-            <section className="mt-8">
-                <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-slate-900">{t.dashboard.recentContracts}</h2>
-                    <button
-                        type="button"
-                        onClick={() => onNavigate('contracts')}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                        {t.dashboard.viewAll}
-                    </button>
+            <section className="mt-6">
+                <h2 className="text-sm font-semibold text-zinc-900">{t("dashboard.quickActions")}</h2>
+                <div className="mt-2 flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => onNavigate("contracts", "purchase")}>
+                        <Plus size={15} />
+                        {t("dashboard.qaPurchase")}
+                    </Button>
+                    <Button variant="secondary" onClick={() => onNavigate("contracts", "sale")}>
+                        <Banknote size={15} />
+                        {t("dashboard.qaSale")}
+                    </Button>
+                    <Button variant="secondary" onClick={() => onNavigate("agreements", "agreement")}>
+                        <ScrollText size={15} />
+                        {t("dashboard.qaAgreement")}
+                    </Button>
+                    <Button variant="secondary" onClick={() => onNavigate("people", "person")}>
+                        <UserPlus size={15} />
+                        {t("dashboard.qaPerson")}
+                    </Button>
                 </div>
-                {contracts.length === 0 ? (
-                    <EmptyState
-                        icon={<CarIcon className="h-6 w-6" />}
-                        title={t.dashboard.emptyTitle}
-                        description={t.dashboard.emptyDescription}
-                        action={
-                            <Button icon={<PlusIcon className="h-4 w-4" />} onClick={() => onNavigate('add-contract')}>
-                                {t.contracts.addContract}
-                            </Button>
-                        }
-                    />
-                ) : (
-                    <ContractsTable contracts={contracts} limit={5} />
-                )}
             </section>
-        </>
+        </div>
     );
 }

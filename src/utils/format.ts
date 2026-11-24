@@ -1,40 +1,53 @@
-import type { Language } from '../i18n';
+// Central formatting helpers. Change CURRENCY once to change it everywhere.
+export const CURRENCY = "USD";
 
-const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
-const ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+export type FormatLocale = "en" | "fa";
 
-/** Converts Persian/Arabic-Indic digits to Latin digits. */
-export function normalizeDigits(input: string): string {
-    return input.replace(/[۰-۹٠-٩]/g, (char) => {
-        const persianIndex = PERSIAN_DIGITS.indexOf(char);
-        if (persianIndex !== -1) return String(persianIndex);
-        return String(ARABIC_DIGITS.indexOf(char));
-    });
+function numberFormatter(locale: FormatLocale): Intl.NumberFormat {
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
 }
 
-/**
- * Extracts the first numeric amount from a free-form price string
- * such as "25,000 USD" or "۲۵۰۰۰ USD".
- */
-export function parsePriceAmount(price: string): number {
-    const normalized = normalizeDigits(price).replace(/,/g, '');
-    const match = normalized.match(/\d+(\.\d+)?/);
-    return match ? Number.parseFloat(match[0]) : 0;
+export function formatNumber(value: number, locale: FormatLocale): string {
+    return numberFormatter(locale).format(value);
 }
 
-/** Formats a number using the digits and separators of the active language. */
-export function formatNumber(value: number, language: Language): string {
-    return new Intl.NumberFormat(language === 'fa' ? 'fa-IR' : 'en-US').format(value);
+export function formatMoney(value: number, locale: FormatLocale): string {
+    return `${numberFormatter(locale).format(value)} ${CURRENCY}`;
 }
 
-/**
- * Returns the currency code (e.g. "USD") only when every contract uses
- * the same one. Returns null when currencies are mixed or missing.
- */
-export function detectCurrency(contracts: { price: string }[]): string | null {
-    const tokens = contracts.flatMap(
-        (contract) => contract.price.toUpperCase().match(/[A-Z]{3,4}/g) ?? [],
+/** 500 basis points -> "5%" (locale-aware digits). */
+export function formatPercent(basisPoints: number, locale: FormatLocale): string {
+    return new Intl.NumberFormat(locale, {
+        style: "percent",
+        maximumFractionDigits: 2,
+    }).format(basisPoints / 10000);
+}
+
+/** Formats a stored "YYYY-MM-DD" string with Intl.DateTimeFormat. */
+export function formatDate(value: string | null, locale: FormatLocale): string {
+    if (!value) return "—";
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return value;
+    return new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    }).format(new Date(year, month - 1, day));
+}
+
+/** Formats a "YYYY-MM" month key for the net-profit breakdown. */
+export function formatMonth(month: string, locale: FormatLocale): string {
+    const [year, m] = month.split("-").map(Number);
+    if (!year || !m) return month;
+    return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short" }).format(
+        new Date(year, m - 1, 1),
     );
-    const unique = [...new Set(tokens)];
-    return unique.length === 1 ? unique[0] : null;
+}
+
+/** Today as "YYYY-MM-DD" (the backend's date format). */
+export function todayISO(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${now.getFullYear()}-${month}-${day}`;
 }

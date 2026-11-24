@@ -1,61 +1,69 @@
-import { useLanguage } from '../../context/LanguageContext';
-import type { Page } from '../../types/navigation';
-import { CarIcon, DashboardIcon, PlusIcon, SettingsIcon } from '../ui/icons';
+import { Car, FileText, LayoutDashboard, ScrollText, Settings, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
+import type { TKey } from "../../i18n";
+import type { PageId } from "../../types/nav";
 
 interface SidebarProps {
-    currentPage: Page;
-    onNavigate: (page: Page) => void;
+    active: PageId;
+    onNavigate: (page: PageId) => void;
 }
 
-interface NavItem {
-    page: Page;
-    label: string;
-    icon: typeof CarIcon;
+const NAV_ITEMS: { id: PageId; labelKey: TKey; icon: LucideIcon }[] = [
+    { id: "dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+    { id: "inventory", labelKey: "nav.inventory", icon: Car },
+    { id: "people", labelKey: "nav.people", icon: Users },
+    { id: "contracts", labelKey: "nav.contracts", icon: FileText },
+    { id: "agreements", labelKey: "nav.agreements", icon: ScrollText },
+];
+
+function navButtonClass(active: boolean): string {
+    return `flex w-full items-center justify-center gap-3 rounded-md px-2 py-2 text-sm font-medium transition-colors duration-150 xl:justify-start xl:px-3 ${active
+            ? "bg-primary/20 text-cyan-300"
+            : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
+        }`;
 }
 
-export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+export default function Sidebar({ active, onNavigate }: SidebarProps) {
     const { t } = useLanguage();
-
-    const mainItems: NavItem[] = [
-        { page: 'dashboard', label: t.nav.dashboard, icon: DashboardIcon },
-        { page: 'contracts', label: t.nav.contracts, icon: CarIcon },
-        { page: 'add-contract', label: t.nav.addContract, icon: PlusIcon },
-    ];
-
-    const settingsItem: NavItem = { page: 'settings', label: t.nav.settings, icon: SettingsIcon };
-
-    const renderNavItem = (item: NavItem) => {
-        const Icon = item.icon;
-        const isActive = currentPage === item.page;
-
-        return (
-            <button
-                key={item.page}
-                type="button"
-                title={item.label}
-                onClick={() => onNavigate(item.page)}
-                className={`flex w-full items-center justify-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:justify-start md:px-3 ${isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-            >
-                <Icon className="h-5 w-5 shrink-0" />
-                {/* Labels are hidden on narrow windows, where the sidebar becomes an icon rail */}
-                <span className="hidden md:inline">{item.label}</span>
-            </button>
-        );
-    };
-
     return (
-        <aside className="flex w-14 shrink-0 flex-col border-e border-slate-200 bg-white md:w-60">
-            <div className="flex h-16 shrink-0 items-center justify-center gap-3 border-b border-slate-200 px-3 md:justify-start md:px-5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
-                    <CarIcon className="h-5 w-5" />
+        <aside className="flex h-full w-14 shrink-0 flex-col border-e border-zinc-800 bg-zinc-900 xl:w-60">
+            <div className="flex h-16 shrink-0 items-center gap-3 border-b border-zinc-800 px-2.5 xl:px-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-white">
+                    <Car size={18} />
                 </div>
-                <span className="hidden text-sm font-semibold text-slate-900 md:block">{t.appName}</span>
+                <div className="hidden min-w-0 xl:block">
+                    <p className="truncate text-sm font-semibold text-white">{t("appName")}</p>
+                    <p className="truncate text-xs text-zinc-500">{t("appTagline")}</p>
+                </div>
             </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto p-3">{mainItems.map(renderNavItem)}</nav>
-            <div className="shrink-0 border-t border-slate-200 p-3">{renderNavItem(settingsItem)}</div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3 xl:px-3">
+                {NAV_ITEMS.map((item) => (
+                    <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onNavigate(item.id)}
+                        title={t(item.labelKey)}
+                        className={navButtonClass(active === item.id)}
+                    >
+                        <item.icon size={17} className="shrink-0" />
+                        <span className="hidden truncate xl:inline">{t(item.labelKey)}</span>
+                    </button>
+                ))}
+            </nav>
+
+            <div className="shrink-0 border-t border-zinc-800 px-2 py-3 xl:px-3">
+                <button
+                    type="button"
+                    onClick={() => onNavigate("settings")}
+                    title={t("nav.settings")}
+                    className={navButtonClass(active === "settings")}
+                >
+                    <Settings size={17} className="shrink-0" />
+                    <span className="hidden truncate xl:inline">{t("nav.settings")}</span>
+                </button>
+            </div>
         </aside>
     );
 }
