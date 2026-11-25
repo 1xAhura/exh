@@ -1,5 +1,6 @@
-use chrono::NaiveDate;
-use std::{sync::Mutex, vec};
+use chrono::{Datelike, NaiveDate};
+use jalali_calendar::JalaliDate;
+use std::{collections::HashMap, sync::Mutex, vec};
 
 /// Represents a person who participates in the exhibition's
 /// business operations, such as buying, selling, or owning cars.
@@ -133,12 +134,6 @@ enum AgreementStatus {
     Cancelled,
 }
 
-#[allow(dead_code)]
-enum CalendarType {
-    Gregorian,
-    Persian,
-}
-
 struct AppState {
     cars: Vec<Car>,
     inventory_items: Vec<InventoryItem>,
@@ -232,8 +227,145 @@ impl AppState {
         }
     }
 
-    #[allow(dead_code)]
-    fn get_monthly_sales(&mut self, _month: u32, _year: u32, _calendar: CalendarType) {}
+    fn get_monthly_sales(
+        &self,
+        year: i32,
+        month: u32,
+        calendar: CalendarType,
+    ) -> MonthlySalesResponse {
+        let mut map = HashMap::new();
+        let total_days;
+        match calendar {
+            CalendarType::Gregorian => {
+                for contract in self.contracts.iter().filter(|contract| {
+                    contract.date.month() == month && contract.date.year() == year
+                }) {
+                    if contract.contract_type == ContractType::Sale {
+                        let amount = map.entry(contract.date.day()).or_insert(0u32);
+                        *amount += 1;
+                    }
+                }
+
+                total_days =
+                    NaiveDate::num_days_in_month(&NaiveDate::from_ymd_opt(year, month, 1).unwrap())
+            }
+
+            CalendarType::Persian => {
+                let start_jalali_date = JalaliDate::new(year, month, 1).unwrap();
+                let end_jalali_date =
+                    JalaliDate::new(year, month, start_jalali_date.days_in_this_month()).unwrap();
+
+                let (start_year, start_month, start_day) = start_jalali_date.to_gregorian();
+
+                let start_gregorian_date =
+                    NaiveDate::from_ymd_opt(start_year, start_month, start_day).unwrap();
+                let (end_year, end_month, end_day) = end_jalali_date.to_gregorian();
+                let end_gregorian_date =
+                    NaiveDate::from_ymd_opt(end_year, end_month, end_day).unwrap();
+
+                for contract in self.contracts.iter().filter(|contract| {
+                    start_gregorian_date <= contract.date && contract.date <= end_gregorian_date
+                }) {
+                    if contract.contract_type == ContractType::Sale {
+                        let amount = map
+                            .entry(
+                                JalaliDate::from_gregorian(
+                                    contract.date.year(),
+                                    contract.date.month(),
+                                    contract.date.day(),
+                                )
+                                .unwrap()
+                                .day(),
+                            )
+                            .or_insert(0u32);
+                        *amount += 1;
+                    }
+                }
+
+                total_days = JalaliDate::new(year, month, 1)
+                    .unwrap()
+                    .days_in_this_month() as u8;
+            }
+        }
+
+        let mut daily_sales_point = vec![];
+
+        for (day, quantity) in map {
+            daily_sales_point.push(DailySalesPoint { day, quantity });
+        }
+
+        daily_sales_point.sort_by_key(|point| point.day);
+
+        MonthlySalesResponse {
+            total_days,
+            data: daily_sales_point,
+        }
+    }
+
+    fn get_yearly_sales(&self, year: i32, calendar: CalendarType) -> YearlySalesResponse {
+        let mut map = HashMap::new();
+        match calendar {
+            CalendarType::Gregorian => {
+                for contract in self
+                    .contracts
+                    .iter()
+                    .filter(|contract| contract.date.year() == year)
+                {
+                    if contract.contract_type == ContractType::Sale {
+                        let amount = map.entry(contract.date.month()).or_insert(0u32);
+                        *amount += 1;
+                    }
+                }
+            }
+
+            CalendarType::Persian => {
+                let start_jalali_date = JalaliDate::new(year, 1, 1).unwrap();
+                let end_jalali_date = JalaliDate::new(year, 12, 1).unwrap();
+
+                let end_jalali_date =
+                    JalaliDate::new(year, 12, end_jalali_date.days_in_this_month()).unwrap();
+
+                let (start_year, start_month, start_day) = start_jalali_date.to_gregorian();
+
+                let start_gregorian_date =
+                    NaiveDate::from_ymd_opt(start_year, start_month, start_day).unwrap();
+                let (end_year, end_month, end_day) = end_jalali_date.to_gregorian();
+                let end_gregorian_date =
+                    NaiveDate::from_ymd_opt(end_year, end_month, end_day).unwrap();
+
+                for contract in self.contracts.iter().filter(|contract| {
+                    start_gregorian_date <= contract.date && contract.date <= end_gregorian_date
+                }) {
+                    if contract.contract_type == ContractType::Sale {
+                        let amount = map
+                            .entry(
+                                JalaliDate::from_gregorian(
+                                    contract.date.year(),
+                                    contract.date.month(),
+                                    contract.date.day(),
+                                )
+                                .unwrap()
+                                .month(),
+                            )
+                            .or_insert(0u32);
+                        *amount += 1;
+                    }
+                }
+            }
+        }
+
+        let mut monthly_sales_point = vec![];
+
+        for (month, quantity) in map {
+            monthly_sales_point.push(MonthlySalesPoint { month, quantity });
+        }
+
+        monthly_sales_point.sort_by_key(|point| point.month);
+
+        YearlySalesResponse {
+            data: monthly_sales_point,
+        }
+    }
 
     fn update_car(&mut self, updated_car: UpdateCar) -> Result<(), String> {
         if let Some(car) = self
@@ -775,6 +907,71 @@ fn get_inventory_item_details(
     let db = state.lock().map_err(|e| e.to_string())?;
 
     db.get_inventory_item_details(inventory_item_id)
+}
+
+#[derive(serde::Deserialize)]
+enum CalendarType {
+    Gregorian,
+    Persian,
+}
+
+#[derive(serde::Serialize)]
+struct DailySalesPoint {
+    day: u32,
+    quantity: u32,
+}
+
+#[derive(serde::Serialize)]
+struct MonthlySalesResponse {
+    total_days: u8,
+    data: Vec<DailySalesPoint>,
+}
+
+#[derive(serde::Deserialize)]
+struct GetMonthlySales {
+    year: i32,
+    month: u32,
+    calendar: CalendarType,
+}
+
+#[tauri::command]
+fn get_monthly_sales(
+    state: tauri::State<Mutex<AppState>>,
+    monthly_sales: GetMonthlySales,
+) -> Result<MonthlySalesResponse, String> {
+    let db = state.lock().map_err(|e| e.to_string())?;
+
+    Ok(db.get_monthly_sales(
+        monthly_sales.year,
+        monthly_sales.month,
+        monthly_sales.calendar,
+    ))
+}
+
+#[derive(serde::Serialize)]
+struct MonthlySalesPoint {
+    month: u32,
+    quantity: u32,
+}
+
+#[derive(serde::Serialize)]
+struct YearlySalesResponse {
+    data: Vec<MonthlySalesPoint>,
+}
+#[derive(serde::Deserialize)]
+struct GetYearlySales {
+    year: i32,
+    calendar: CalendarType,
+}
+
+#[tauri::command]
+fn get_yearly_sales(
+    state: tauri::State<Mutex<AppState>>,
+    yearly_sales: GetYearlySales,
+) -> Result<YearlySalesResponse, String> {
+    let db = state.lock().map_err(|e| e.to_string())?;
+
+    Ok(db.get_yearly_sales(yearly_sales.year, yearly_sales.calendar))
 }
 
 #[derive(serde::Deserialize)]
@@ -2787,6 +2984,8 @@ pub fn run() {
             get_people,
             get_inventory_details,
             get_inventory_item_details,
+            get_monthly_sales,
+            get_yearly_sales,
             update_car,
             update_person,
             update_extra_cost,
