@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use std::{sync::Mutex, vec};
 
 /// Represents a person who participates in the exhibition's
@@ -27,8 +28,8 @@ struct InventoryItem {
     car_id: u32,
     acquisition_type: AcquisitionType,
     status: InventoryStatus,
-    entry_date: String,
-    removal_date: Option<String>,
+    entry_date: NaiveDate,
+    removal_date: Option<NaiveDate>,
 }
 
 /// Defines how a car entered the exhibition's inventory.
@@ -65,7 +66,7 @@ struct Contract {
     buyer_id: Option<u32>,
     seller_id: Option<u32>,
     contract_type: ContractType,
-    date: String,
+    date: NaiveDate,
     price: i64,
 }
 
@@ -85,7 +86,7 @@ struct ExtraCost {
     title: String,
     description: String,
     price: i64,
-    date: String,
+    date: NaiveDate,
 }
 
 /// Represents an agreement allowing the exhibition to
@@ -96,9 +97,9 @@ struct ConsignmentAgreement {
     agreement_number: String,
     inventory_item_id: u32,
     owner_id: u32,
-    start_date: String,
-    end_date: String,
-    closed_date: Option<String>,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
+    closed_date: Option<NaiveDate>,
     minimum_owner_payout: i64,
     commission: Commission,
     status: AgreementStatus,
@@ -130,6 +131,12 @@ enum AgreementStatus {
 
     /// The agreement was terminated before its end date.
     Cancelled,
+}
+
+#[allow(dead_code)]
+enum CalendarType {
+    Gregorian,
+    Persian,
 }
 
 struct AppState {
@@ -224,6 +231,9 @@ impl AppState {
             Err(format!("Item #{} doesn't exist.", inventory_item_id))
         }
     }
+
+    #[allow(dead_code)]
+    fn get_monthly_sales(&mut self, _month: u32, _year: u32, _calendar: CalendarType) {}
 
     fn update_car(&mut self, updated_car: UpdateCar) -> Result<(), String> {
         if let Some(car) = self
@@ -454,7 +464,7 @@ impl AppState {
         Ok(())
     }
 
-    fn sell_inventory_item(&mut self, item_id: u32, removal_date: String) -> Result<(), String> {
+    fn sell_inventory_item(&mut self, item_id: u32, removal_date: NaiveDate) -> Result<(), String> {
         if let Some(item) = self
             .inventory_items
             .iter_mut()
@@ -575,7 +585,7 @@ impl AppState {
     fn withdraw_inventory_item(
         &mut self,
         item_id: u32,
-        removal_date: String,
+        removal_date: NaiveDate,
     ) -> Result<(), String> {
         if let Some(item) = self
             .inventory_items
@@ -598,7 +608,7 @@ impl AppState {
     fn complete_consignment_agreement(
         &mut self,
         agreement_id: u32,
-        end_date: String,
+        end_date: NaiveDate,
         contract_number: String,
         buyer_id: Option<u32>,
         price: i64,
@@ -637,7 +647,7 @@ impl AppState {
     fn expire_consignment_agreement(
         &mut self,
         agreement_id: u32,
-        end_date: String,
+        end_date: NaiveDate,
     ) -> Result<(), String> {
         if let Some(agreement) = self
             .consignment_agreements
@@ -668,7 +678,7 @@ impl AppState {
     fn cancel_consignment_agreement(
         &mut self,
         agreement_id: u32,
-        end_date: String,
+        end_date: NaiveDate,
     ) -> Result<(), String> {
         if let Some(agreement) = self
             .consignment_agreements
@@ -804,7 +814,7 @@ struct UpdateExtraCost {
     id: u32,
     title: Option<String>,
     description: Option<String>,
-    date: Option<String>,
+    date: Option<NaiveDate>,
     price: Option<i64>,
 }
 
@@ -830,7 +840,7 @@ struct CreateInventoryItem {
     car_name: String,
     production_date: u16,
     acquisition_type: AcquisitionType,
-    entry_date: String,
+    entry_date: NaiveDate,
 }
 
 #[derive(serde::Serialize)]
@@ -844,7 +854,7 @@ struct CreatePurchaseContract {
     contract_number: String,
     buyer_id: Option<u32>,
     seller_id: Option<u32>,
-    date: String,
+    date: NaiveDate,
     car_name: String,
     production_date: u16,
     price: i64,
@@ -866,7 +876,7 @@ struct CreateSellContract {
     inventory_item_id: u32,
     buyer_id: Option<u32>,
     seller_id: Option<u32>,
-    date: String,
+    date: NaiveDate,
     price: i64,
 }
 
@@ -900,7 +910,7 @@ struct AddExtraCost {
     title: String,
     description: String,
     price: i64,
-    date: String,
+    date: NaiveDate,
 }
 
 #[tauri::command]
@@ -918,8 +928,8 @@ struct CreateConsignmentAgreement {
     agreement_number: String,
     owner_id: u32,
     car_name: String,
-    start_date: String,
-    end_date: String,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
     minimum_owner_payout: i64,
     production_date: u16,
     commission: Commission,
@@ -939,7 +949,7 @@ fn create_consignment_agreement(
 fn withdraw_inventory_item(
     state: tauri::State<Mutex<AppState>>,
     item_id: u32,
-    removal_date: String,
+    removal_date: NaiveDate,
 ) -> Result<(), String> {
     let mut db = state.lock().map_err(|e| e.to_string())?;
 
@@ -950,7 +960,7 @@ fn withdraw_inventory_item(
 fn complete_consignment_agreement(
     state: tauri::State<Mutex<AppState>>,
     agreement_id: u32,
-    end_date: String,
+    end_date: NaiveDate,
     contract_number: String,
     buyer_id: Option<u32>,
     price: i64,
@@ -964,7 +974,7 @@ fn complete_consignment_agreement(
 fn expire_consignment_agreement(
     state: tauri::State<Mutex<AppState>>,
     agreement_id: u32,
-    end_date: String,
+    end_date: NaiveDate,
 ) -> Result<(), String> {
     let mut db = state.lock().map_err(|e| e.to_string())?;
 
@@ -975,7 +985,7 @@ fn expire_consignment_agreement(
 fn cancel_consignment_agreement(
     state: tauri::State<Mutex<AppState>>,
     agreement_id: u32,
-    end_date: String,
+    end_date: NaiveDate,
 ) -> Result<(), String> {
     let mut db = state.lock().map_err(|e| e.to_string())?;
 
@@ -983,7 +993,7 @@ fn cancel_consignment_agreement(
 }
 
 fn sample_app_state() -> AppState {
-    // Reference date: 2026-11-24.
+    // Reference date: 2026-11-24. All dates are Gregorian NaiveDate values.
     // Dataset spans 2025-08 .. 2026-11 with active agreements ending in the future.
     // Lifecycle invariants baked in:
     //   - Purchase contract date == inventory entry date (owned items).
@@ -995,6 +1005,13 @@ fn sample_app_state() -> AppState {
     //   - Consigned sale contracts: seller_id == agreement owner.
     //   - Extra costs only on Owned items, dated inside the item's stay.
     //   - Car 7 and Car 18 each have two non-overlapping stays (re-acquired / re-consigned).
+
+    // Concise constructor for the seed's fixed Gregorian dates. Panics only if a
+    // seed date were not a real calendar day — all values below are valid.
+    fn d(year: i32, month: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(year, month, day)
+            .expect("seed data contains only valid calendar dates")
+    }
 
     AppState {
         // -------------------------------------------------------------
@@ -1210,24 +1227,24 @@ fn sample_app_state() -> AppState {
                 car_id: 1,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-08-12".to_string(),
-                removal_date: Some("2025-10-03".to_string()),
+                entry_date: d(2025, 8, 12),
+                removal_date: Some(d(2025, 10, 3)),
             },
             InventoryItem {
                 id: 2,
                 car_id: 2,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-08-28".to_string(),
-                removal_date: Some("2025-10-21".to_string()),
+                entry_date: d(2025, 8, 28),
+                removal_date: Some(d(2025, 10, 21)),
             },
             InventoryItem {
                 id: 3,
                 car_id: 3,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-09-09".to_string(),
-                removal_date: Some("2025-11-05".to_string()),
+                entry_date: d(2025, 9, 9),
+                removal_date: Some(d(2025, 11, 5)),
             },
             // Car 7, first stay (sold, later re-acquired as item 16).
             InventoryItem {
@@ -1235,40 +1252,40 @@ fn sample_app_state() -> AppState {
                 car_id: 7,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-09-05".to_string(),
-                removal_date: Some("2025-11-12".to_string()),
+                entry_date: d(2025, 9, 5),
+                removal_date: Some(d(2025, 11, 12)),
             },
             InventoryItem {
                 id: 5,
                 car_id: 4,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-09-25".to_string(),
-                removal_date: Some("2025-12-10".to_string()),
+                entry_date: d(2025, 9, 25),
+                removal_date: Some(d(2025, 12, 10)),
             },
             InventoryItem {
                 id: 6,
                 car_id: 5,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-10-14".to_string(),
-                removal_date: Some("2025-12-02".to_string()),
+                entry_date: d(2025, 10, 14),
+                removal_date: Some(d(2025, 12, 2)),
             },
             InventoryItem {
                 id: 7,
                 car_id: 6,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-11-06".to_string(),
-                removal_date: Some("2026-01-15".to_string()),
+                entry_date: d(2025, 11, 6),
+                removal_date: Some(d(2026, 1, 15)),
             },
             InventoryItem {
                 id: 8,
                 car_id: 8,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-11-18".to_string(),
-                removal_date: Some("2026-02-06".to_string()),
+                entry_date: d(2025, 11, 18),
+                removal_date: Some(d(2026, 2, 6)),
             },
             // Owned, withdrawn (no sale).
             InventoryItem {
@@ -1276,16 +1293,16 @@ fn sample_app_state() -> AppState {
                 car_id: 30,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Withdrawn,
-                entry_date: "2025-12-17".to_string(),
-                removal_date: Some("2026-03-09".to_string()),
+                entry_date: d(2025, 12, 17),
+                removal_date: Some(d(2026, 3, 9)),
             },
             InventoryItem {
                 id: 10,
                 car_id: 11,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-12-09".to_string(),
-                removal_date: Some("2026-02-18".to_string()),
+                entry_date: d(2025, 12, 9),
+                removal_date: Some(d(2026, 2, 18)),
             },
             // ---- Owned: sold in 2026 ----
             InventoryItem {
@@ -1293,40 +1310,40 @@ fn sample_app_state() -> AppState {
                 car_id: 12,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-01-12".to_string(),
-                removal_date: Some("2026-03-20".to_string()),
+                entry_date: d(2026, 1, 12),
+                removal_date: Some(d(2026, 3, 20)),
             },
             InventoryItem {
                 id: 12,
                 car_id: 16,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-03-16".to_string(),
-                removal_date: Some("2026-05-28".to_string()),
+                entry_date: d(2026, 3, 16),
+                removal_date: Some(d(2026, 5, 28)),
             },
             InventoryItem {
                 id: 13,
                 car_id: 17,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-04-07".to_string(),
-                removal_date: Some("2026-06-30".to_string()),
+                entry_date: d(2026, 4, 7),
+                removal_date: Some(d(2026, 6, 30)),
             },
             InventoryItem {
                 id: 14,
                 car_id: 33,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-08-25".to_string(),
-                removal_date: Some("2026-11-06".to_string()),
+                entry_date: d(2026, 8, 25),
+                removal_date: Some(d(2026, 11, 6)),
             },
             InventoryItem {
                 id: 15,
                 car_id: 24,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-06-02".to_string(),
-                removal_date: Some("2026-08-19".to_string()),
+                entry_date: d(2026, 6, 2),
+                removal_date: Some(d(2026, 8, 19)),
             },
             // Car 7, second stay: bought back from the 2025 buyer, now in stock.
             InventoryItem {
@@ -1334,7 +1351,7 @@ fn sample_app_state() -> AppState {
                 car_id: 7,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-09-14".to_string(),
+                entry_date: d(2026, 9, 14),
                 removal_date: None,
             },
             // ---- Owned: currently in stock ----
@@ -1343,7 +1360,7 @@ fn sample_app_state() -> AppState {
                 car_id: 9,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-02".to_string(),
+                entry_date: d(2026, 10, 2),
                 removal_date: None,
             },
             InventoryItem {
@@ -1351,7 +1368,7 @@ fn sample_app_state() -> AppState {
                 car_id: 10,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-09-20".to_string(),
+                entry_date: d(2026, 9, 20),
                 removal_date: None,
             },
             InventoryItem {
@@ -1359,7 +1376,7 @@ fn sample_app_state() -> AppState {
                 car_id: 13,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-08-14".to_string(),
+                entry_date: d(2026, 8, 14),
                 removal_date: None,
             },
             InventoryItem {
@@ -1367,7 +1384,7 @@ fn sample_app_state() -> AppState {
                 car_id: 21,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-06-24".to_string(),
+                entry_date: d(2026, 6, 24),
                 removal_date: None,
             },
             InventoryItem {
@@ -1375,7 +1392,7 @@ fn sample_app_state() -> AppState {
                 car_id: 23,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-11-10".to_string(),
+                entry_date: d(2026, 11, 10),
                 removal_date: None,
             },
             InventoryItem {
@@ -1383,7 +1400,7 @@ fn sample_app_state() -> AppState {
                 car_id: 19,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-21".to_string(),
+                entry_date: d(2026, 10, 21),
                 removal_date: None,
             },
             InventoryItem {
@@ -1391,7 +1408,7 @@ fn sample_app_state() -> AppState {
                 car_id: 28,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-15".to_string(),
+                entry_date: d(2026, 10, 15),
                 removal_date: None,
             },
             InventoryItem {
@@ -1399,8 +1416,8 @@ fn sample_app_state() -> AppState {
                 car_id: 22,
                 acquisition_type: AcquisitionType::Owned,
                 status: InventoryStatus::Withdrawn,
-                entry_date: "2026-02-19".to_string(),
-                removal_date: Some("2026-06-08".to_string()),
+                entry_date: d(2026, 2, 19),
+                removal_date: Some(d(2026, 6, 8)),
             },
             // ---- Consigned ----
             InventoryItem {
@@ -1408,15 +1425,15 @@ fn sample_app_state() -> AppState {
                 car_id: 14,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-09-18".to_string(),
-                removal_date: Some("2025-11-20".to_string()),
+                entry_date: d(2025, 9, 18),
+                removal_date: Some(d(2025, 11, 20)),
             },
             InventoryItem {
                 id: 26,
                 car_id: 15,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-09".to_string(),
+                entry_date: d(2026, 10, 9),
                 removal_date: None,
             },
             InventoryItem {
@@ -1424,8 +1441,8 @@ fn sample_app_state() -> AppState {
                 car_id: 20,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-11-20".to_string(),
-                removal_date: Some("2026-01-28".to_string()),
+                entry_date: d(2025, 11, 20),
+                removal_date: Some(d(2026, 1, 28)),
             },
             // Car 18, first stay (agreement expired, car returned; re-consigned as item 39).
             InventoryItem {
@@ -1433,23 +1450,23 @@ fn sample_app_state() -> AppState {
                 car_id: 18,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Withdrawn,
-                entry_date: "2025-10-20".to_string(),
-                removal_date: Some("2026-01-18".to_string()),
+                entry_date: d(2025, 10, 20),
+                removal_date: Some(d(2026, 1, 18)),
             },
             InventoryItem {
                 id: 29,
                 car_id: 25,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-02-12".to_string(),
-                removal_date: Some("2026-04-03".to_string()),
+                entry_date: d(2026, 2, 12),
+                removal_date: Some(d(2026, 4, 3)),
             },
             InventoryItem {
                 id: 30,
                 car_id: 26,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-09-08".to_string(),
+                entry_date: d(2026, 9, 8),
                 removal_date: None,
             },
             InventoryItem {
@@ -1457,15 +1474,15 @@ fn sample_app_state() -> AppState {
                 car_id: 27,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-05-06".to_string(),
-                removal_date: Some("2026-06-25".to_string()),
+                entry_date: d(2026, 5, 6),
+                removal_date: Some(d(2026, 6, 25)),
             },
             InventoryItem {
                 id: 32,
                 car_id: 29,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-08-19".to_string(),
+                entry_date: d(2026, 8, 19),
                 removal_date: None,
             },
             InventoryItem {
@@ -1473,15 +1490,15 @@ fn sample_app_state() -> AppState {
                 car_id: 31,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2025-12-03".to_string(),
-                removal_date: Some("2026-02-26".to_string()),
+                entry_date: d(2025, 12, 3),
+                removal_date: Some(d(2026, 2, 26)),
             },
             InventoryItem {
                 id: 34,
                 car_id: 32,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-07-15".to_string(),
+                entry_date: d(2026, 7, 15),
                 removal_date: None,
             },
             InventoryItem {
@@ -1489,23 +1506,23 @@ fn sample_app_state() -> AppState {
                 car_id: 34,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Withdrawn,
-                entry_date: "2026-04-18".to_string(),
-                removal_date: Some("2026-07-11".to_string()),
+                entry_date: d(2026, 4, 18),
+                removal_date: Some(d(2026, 7, 11)),
             },
             InventoryItem {
                 id: 36,
                 car_id: 35,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-06-16".to_string(),
-                removal_date: Some("2026-08-07".to_string()),
+                entry_date: d(2026, 6, 16),
+                removal_date: Some(d(2026, 8, 7)),
             },
             InventoryItem {
                 id: 37,
                 car_id: 36,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-27".to_string(),
+                entry_date: d(2026, 10, 27),
                 removal_date: None,
             },
             InventoryItem {
@@ -1513,8 +1530,8 @@ fn sample_app_state() -> AppState {
                 car_id: 37,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Withdrawn,
-                entry_date: "2026-01-22".to_string(),
-                removal_date: Some("2026-04-20".to_string()),
+                entry_date: d(2026, 1, 22),
+                removal_date: Some(d(2026, 4, 20)),
             },
             // Car 18, second stay: re-consigned by the same owner after the expiry.
             InventoryItem {
@@ -1522,7 +1539,7 @@ fn sample_app_state() -> AppState {
                 car_id: 18,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-10-05".to_string(),
+                entry_date: d(2026, 10, 5),
                 removal_date: None,
             },
             InventoryItem {
@@ -1530,7 +1547,7 @@ fn sample_app_state() -> AppState {
                 car_id: 38,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::InStock,
-                entry_date: "2026-11-12".to_string(),
+                entry_date: d(2026, 11, 12),
                 removal_date: None,
             },
             InventoryItem {
@@ -1538,8 +1555,8 @@ fn sample_app_state() -> AppState {
                 car_id: 39,
                 acquisition_type: AcquisitionType::Consignment,
                 status: InventoryStatus::Sold,
-                entry_date: "2026-08-03".to_string(),
-                removal_date: Some("2026-10-17".to_string()),
+                entry_date: d(2026, 8, 3),
+                removal_date: Some(d(2026, 10, 17)),
             },
         ],
 
@@ -1743,7 +1760,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(1),
                 contract_type: ContractType::Purchase,
-                date: "2025-08-12".to_string(),
+                date: d(2025, 8, 12),
                 price: 24500,
             },
             Contract {
@@ -1753,7 +1770,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(2),
                 contract_type: ContractType::Purchase,
-                date: "2025-08-28".to_string(),
+                date: d(2025, 8, 28),
                 price: 24100,
             },
             Contract {
@@ -1763,7 +1780,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(1),
                 contract_type: ContractType::Purchase,
-                date: "2025-09-05".to_string(),
+                date: d(2025, 9, 5),
                 price: 27300,
             },
             Contract {
@@ -1773,7 +1790,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(5),
                 contract_type: ContractType::Purchase,
-                date: "2025-09-09".to_string(),
+                date: d(2025, 9, 9),
                 price: 30200,
             },
             Contract {
@@ -1783,7 +1800,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(7),
                 contract_type: ContractType::Purchase,
-                date: "2025-09-25".to_string(),
+                date: d(2025, 9, 25),
                 price: 33500,
             },
             Contract {
@@ -1793,7 +1810,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(11),
                 contract_type: ContractType::Purchase,
-                date: "2025-10-14".to_string(),
+                date: d(2025, 10, 14),
                 price: 22800,
             },
             Contract {
@@ -1803,7 +1820,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(16),
                 contract_type: ContractType::Purchase,
-                date: "2025-11-06".to_string(),
+                date: d(2025, 11, 6),
                 price: 25400,
             },
             Contract {
@@ -1813,7 +1830,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(23),
                 contract_type: ContractType::Purchase,
-                date: "2025-11-18".to_string(),
+                date: d(2025, 11, 18),
                 price: 29800,
             },
             Contract {
@@ -1823,7 +1840,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(14),
                 contract_type: ContractType::Purchase,
-                date: "2025-12-09".to_string(),
+                date: d(2025, 12, 9),
                 price: 31200,
             },
             Contract {
@@ -1833,7 +1850,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(26),
                 contract_type: ContractType::Purchase,
-                date: "2025-12-17".to_string(),
+                date: d(2025, 12, 17),
                 price: 18900,
             },
             Contract {
@@ -1843,7 +1860,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(19),
                 contract_type: ContractType::Purchase,
-                date: "2026-01-12".to_string(),
+                date: d(2026, 1, 12),
                 price: 26300,
             },
             Contract {
@@ -1853,7 +1870,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(26),
                 contract_type: ContractType::Purchase,
-                date: "2026-02-19".to_string(),
+                date: d(2026, 2, 19),
                 price: 31700,
             },
             Contract {
@@ -1863,7 +1880,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(9),
                 contract_type: ContractType::Purchase,
-                date: "2026-03-16".to_string(),
+                date: d(2026, 3, 16),
                 price: 38600,
             },
             Contract {
@@ -1873,7 +1890,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(5),
                 contract_type: ContractType::Purchase,
-                date: "2026-04-07".to_string(),
+                date: d(2026, 4, 7),
                 price: 44300,
             },
             Contract {
@@ -1883,7 +1900,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(21),
                 contract_type: ContractType::Purchase,
-                date: "2026-06-02".to_string(),
+                date: d(2026, 6, 2),
                 price: 33900,
             },
             Contract {
@@ -1893,7 +1910,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(16),
                 contract_type: ContractType::Purchase,
-                date: "2026-06-24".to_string(),
+                date: d(2026, 6, 24),
                 price: 18300,
             },
             Contract {
@@ -1903,7 +1920,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(7),
                 contract_type: ContractType::Purchase,
-                date: "2026-08-14".to_string(),
+                date: d(2026, 8, 14),
                 price: 33400,
             },
             Contract {
@@ -1913,7 +1930,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(23),
                 contract_type: ContractType::Purchase,
-                date: "2026-08-25".to_string(),
+                date: d(2026, 8, 25),
                 price: 29300,
             },
             // Buyback: person 12 bought this RAV4 in 2025 (SAL-2025-004) and sells it back.
@@ -1924,7 +1941,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(12),
                 contract_type: ContractType::Purchase,
-                date: "2026-09-14".to_string(),
+                date: d(2026, 9, 14),
                 price: 26800,
             },
             Contract {
@@ -1934,7 +1951,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(26),
                 contract_type: ContractType::Purchase,
-                date: "2026-09-20".to_string(),
+                date: d(2026, 9, 20),
                 price: 21600,
             },
             Contract {
@@ -1944,7 +1961,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(14),
                 contract_type: ContractType::Purchase,
-                date: "2026-10-02".to_string(),
+                date: d(2026, 10, 2),
                 price: 23900,
             },
             Contract {
@@ -1954,7 +1971,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(27),
                 contract_type: ContractType::Purchase,
-                date: "2026-10-15".to_string(),
+                date: d(2026, 10, 15),
                 price: 88500,
             },
             Contract {
@@ -1964,7 +1981,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(11),
                 contract_type: ContractType::Purchase,
-                date: "2026-10-21".to_string(),
+                date: d(2026, 10, 21),
                 price: 40100,
             },
             Contract {
@@ -1974,7 +1991,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: None,
                 seller_id: Some(2),
                 contract_type: ContractType::Purchase,
-                date: "2026-11-10".to_string(),
+                date: d(2026, 11, 10),
                 price: 24900,
             },
             // ---- Sale contracts: owned vehicles (seller None == dealership) ----
@@ -1985,7 +2002,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(3),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-10-03".to_string(),
+                date: d(2025, 10, 3),
                 price: 27800,
             },
             Contract {
@@ -1995,7 +2012,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(8),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-10-21".to_string(),
+                date: d(2025, 10, 21),
                 price: 26900,
             },
             Contract {
@@ -2005,7 +2022,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(3),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-11-05".to_string(),
+                date: d(2025, 11, 5),
                 price: 33900,
             },
             Contract {
@@ -2015,7 +2032,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(12),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-11-12".to_string(),
+                date: d(2025, 11, 12),
                 price: 29900,
             },
             Contract {
@@ -2025,7 +2042,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(17),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-12-02".to_string(),
+                date: d(2025, 12, 2),
                 price: 24600,
             },
             Contract {
@@ -2035,7 +2052,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(10),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2025-12-10".to_string(),
+                date: d(2025, 12, 10),
                 price: 36700,
             },
             Contract {
@@ -2045,7 +2062,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(22),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-01-15".to_string(),
+                date: d(2026, 1, 15),
                 price: 28200,
             },
             Contract {
@@ -2055,7 +2072,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(20),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-02-06".to_string(),
+                date: d(2026, 2, 6),
                 price: 31500,
             },
             Contract {
@@ -2065,7 +2082,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(13),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-02-18".to_string(),
+                date: d(2026, 2, 18),
                 price: 34400,
             },
             Contract {
@@ -2075,7 +2092,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(8),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-03-20".to_string(),
+                date: d(2026, 3, 20),
                 price: 28700,
             },
             Contract {
@@ -2085,7 +2102,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(10),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-05-28".to_string(),
+                date: d(2026, 5, 28),
                 price: 41900,
             },
             Contract {
@@ -2095,7 +2112,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(3),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-06-30".to_string(),
+                date: d(2026, 6, 30),
                 price: 47600,
             },
             Contract {
@@ -2105,7 +2122,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(25),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-08-19".to_string(),
+                date: d(2026, 8, 19),
                 price: 36800,
             },
             Contract {
@@ -2115,7 +2132,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(8),
                 seller_id: None,
                 contract_type: ContractType::Sale,
-                date: "2026-11-06".to_string(),
+                date: d(2026, 11, 6),
                 price: 31900,
             },
             // ---- Sale contracts: consigned vehicles (seller == agreement owner) ----
@@ -2126,7 +2143,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(13),
                 seller_id: Some(28),
                 contract_type: ContractType::Sale,
-                date: "2025-11-20".to_string(),
+                date: d(2025, 11, 20),
                 price: 41500,
             },
             Contract {
@@ -2136,7 +2153,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(8),
                 seller_id: Some(9),
                 contract_type: ContractType::Sale,
-                date: "2026-01-28".to_string(),
+                date: d(2026, 1, 28),
                 price: 36900,
             },
             Contract {
@@ -2146,7 +2163,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(20),
                 seller_id: Some(21),
                 contract_type: ContractType::Sale,
-                date: "2026-02-26".to_string(),
+                date: d(2026, 2, 26),
                 price: 37500,
             },
             Contract {
@@ -2156,7 +2173,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(22),
                 seller_id: Some(12),
                 contract_type: ContractType::Sale,
-                date: "2026-04-03".to_string(),
+                date: d(2026, 4, 3),
                 price: 33800,
             },
             Contract {
@@ -2166,7 +2183,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(17),
                 seller_id: Some(18),
                 contract_type: ContractType::Sale,
-                date: "2026-06-25".to_string(),
+                date: d(2026, 6, 25),
                 price: 29700,
             },
             Contract {
@@ -2176,7 +2193,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(10),
                 seller_id: Some(4),
                 contract_type: ContractType::Sale,
-                date: "2026-08-07".to_string(),
+                date: d(2026, 8, 7),
                 price: 42900,
             },
             Contract {
@@ -2186,7 +2203,7 @@ fn sample_app_state() -> AppState {
                 buyer_id: Some(3),
                 seller_id: Some(6),
                 contract_type: ContractType::Sale,
-                date: "2026-10-17".to_string(),
+                date: d(2026, 10, 17),
                 price: 26800,
             },
         ],
@@ -2201,7 +2218,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Flatbed transport from previous owner".to_string(),
                 price: 350,
-                date: "2025-08-14".to_string(),
+                date: d(2025, 8, 14),
             },
             ExtraCost {
                 id: 2,
@@ -2209,7 +2226,7 @@ fn sample_app_state() -> AppState {
                 title: "Exterior detailing".to_string(),
                 description: "Full paint decontamination and polish".to_string(),
                 price: 220,
-                date: "2025-08-20".to_string(),
+                date: d(2025, 8, 20),
             },
             ExtraCost {
                 id: 3,
@@ -2217,7 +2234,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Deep interior shampoo".to_string(),
                 price: 130,
-                date: "2025-09-01".to_string(),
+                date: d(2025, 9, 1),
             },
             ExtraCost {
                 id: 4,
@@ -2225,7 +2242,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Pre-sale 120-point inspection".to_string(),
                 price: 140,
-                date: "2025-09-02".to_string(),
+                date: d(2025, 9, 2),
             },
             ExtraCost {
                 id: 5,
@@ -2233,7 +2250,7 @@ fn sample_app_state() -> AppState {
                 title: "Brake replacement".to_string(),
                 description: "Front pads and rotors".to_string(),
                 price: 640,
-                date: "2025-09-15".to_string(),
+                date: d(2025, 9, 15),
             },
             ExtraCost {
                 id: 6,
@@ -2241,7 +2258,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Four new all-season tires".to_string(),
                 price: 780,
-                date: "2025-09-22".to_string(),
+                date: d(2025, 9, 22),
             },
             ExtraCost {
                 id: 7,
@@ -2249,7 +2266,7 @@ fn sample_app_state() -> AppState {
                 title: "Paint correction".to_string(),
                 description: "Buff out door scratches".to_string(),
                 price: 310,
-                date: "2025-10-01".to_string(),
+                date: d(2025, 10, 1),
             },
             ExtraCost {
                 id: 8,
@@ -2257,7 +2274,7 @@ fn sample_app_state() -> AppState {
                 title: "Battery replacement".to_string(),
                 description: "New OEM battery".to_string(),
                 price: 195,
-                date: "2025-10-12".to_string(),
+                date: d(2025, 10, 12),
             },
             ExtraCost {
                 id: 9,
@@ -2265,7 +2282,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Transport from trade-in location".to_string(),
                 price: 380,
-                date: "2025-09-08".to_string(),
+                date: d(2025, 9, 8),
             },
             ExtraCost {
                 id: 10,
@@ -2273,7 +2290,7 @@ fn sample_app_state() -> AppState {
                 title: "Minor repairs".to_string(),
                 description: "Replacement of damaged mirror".to_string(),
                 price: 240,
-                date: "2025-10-08".to_string(),
+                date: d(2025, 10, 8),
             },
             ExtraCost {
                 id: 11,
@@ -2281,7 +2298,7 @@ fn sample_app_state() -> AppState {
                 title: "Exterior detailing".to_string(),
                 description: "Machine polish and wax".to_string(),
                 price: 280,
-                date: "2025-11-12".to_string(),
+                date: d(2025, 11, 12),
             },
             ExtraCost {
                 id: 12,
@@ -2289,7 +2306,7 @@ fn sample_app_state() -> AppState {
                 title: "Battery replacement".to_string(),
                 description: "Battery tested low, replaced".to_string(),
                 price: 210,
-                date: "2025-10-20".to_string(),
+                date: d(2025, 10, 20),
             },
             ExtraCost {
                 id: 13,
@@ -2297,7 +2314,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Upholstery steam clean".to_string(),
                 price: 130,
-                date: "2025-11-04".to_string(),
+                date: d(2025, 11, 4),
             },
             ExtraCost {
                 id: 14,
@@ -2305,7 +2322,7 @@ fn sample_app_state() -> AppState {
                 title: "Engine maintenance".to_string(),
                 description: "Oil service and filters".to_string(),
                 price: 520,
-                date: "2025-12-01".to_string(),
+                date: d(2025, 12, 1),
             },
             ExtraCost {
                 id: 15,
@@ -2313,7 +2330,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Two new rear tires".to_string(),
                 price: 740,
-                date: "2026-01-09".to_string(),
+                date: d(2026, 1, 9),
             },
             ExtraCost {
                 id: 16,
@@ -2321,7 +2338,7 @@ fn sample_app_state() -> AppState {
                 title: "Minor repairs".to_string(),
                 description: "Window regulator repair".to_string(),
                 price: 210,
-                date: "2026-01-08".to_string(),
+                date: d(2026, 1, 8),
             },
             ExtraCost {
                 id: 17,
@@ -2329,7 +2346,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Transport from seller".to_string(),
                 price: 310,
-                date: "2025-12-11".to_string(),
+                date: d(2025, 12, 11),
             },
             ExtraCost {
                 id: 18,
@@ -2337,7 +2354,7 @@ fn sample_app_state() -> AppState {
                 title: "Exterior detailing".to_string(),
                 description: "Paint correction and sealant".to_string(),
                 price: 260,
-                date: "2025-12-15".to_string(),
+                date: d(2025, 12, 15),
             },
             ExtraCost {
                 id: 19,
@@ -2345,7 +2362,7 @@ fn sample_app_state() -> AppState {
                 title: "Minor repairs".to_string(),
                 description: "Infotainment unit reflash".to_string(),
                 price: 480,
-                date: "2026-01-10".to_string(),
+                date: d(2026, 1, 10),
             },
             ExtraCost {
                 id: 20,
@@ -2353,7 +2370,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Full set of tires".to_string(),
                 price: 690,
-                date: "2026-01-20".to_string(),
+                date: d(2026, 1, 20),
             },
             ExtraCost {
                 id: 21,
@@ -2361,7 +2378,7 @@ fn sample_app_state() -> AppState {
                 title: "Paint correction".to_string(),
                 description: "Rear bumper scuff repair".to_string(),
                 price: 290,
-                date: "2026-02-10".to_string(),
+                date: d(2026, 2, 10),
             },
             ExtraCost {
                 id: 22,
@@ -2369,7 +2386,7 @@ fn sample_app_state() -> AppState {
                 title: "Brake replacement".to_string(),
                 description: "Pads and rotors all around".to_string(),
                 price: 720,
-                date: "2026-03-24".to_string(),
+                date: d(2026, 3, 24),
             },
             ExtraCost {
                 id: 23,
@@ -2377,7 +2394,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Third-row upholstery clean".to_string(),
                 price: 150,
-                date: "2026-04-14".to_string(),
+                date: d(2026, 4, 14),
             },
             ExtraCost {
                 id: 24,
@@ -2385,7 +2402,7 @@ fn sample_app_state() -> AppState {
                 title: "Minor repairs".to_string(),
                 description: "Trailer harness rewiring".to_string(),
                 price: 260,
-                date: "2026-05-02".to_string(),
+                date: d(2026, 5, 2),
             },
             ExtraCost {
                 id: 25,
@@ -2393,7 +2410,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Transport from seller".to_string(),
                 price: 340,
-                date: "2026-08-27".to_string(),
+                date: d(2026, 8, 27),
             },
             ExtraCost {
                 id: 26,
@@ -2401,7 +2418,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Detail and odor treatment".to_string(),
                 price: 120,
-                date: "2026-09-05".to_string(),
+                date: d(2026, 9, 5),
             },
             ExtraCost {
                 id: 27,
@@ -2409,7 +2426,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Two new tires".to_string(),
                 price: 760,
-                date: "2026-06-10".to_string(),
+                date: d(2026, 6, 10),
             },
             ExtraCost {
                 id: 28,
@@ -2417,7 +2434,7 @@ fn sample_app_state() -> AppState {
                 title: "Exterior detailing".to_string(),
                 description: "Wax and trim restoration".to_string(),
                 price: 240,
-                date: "2026-07-01".to_string(),
+                date: d(2026, 7, 1),
             },
             ExtraCost {
                 id: 29,
@@ -2425,7 +2442,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Pre-sale inspection".to_string(),
                 price: 170,
-                date: "2026-06-15".to_string(),
+                date: d(2026, 6, 15),
             },
             ExtraCost {
                 id: 30,
@@ -2433,7 +2450,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Post-buyback inspection".to_string(),
                 price: 160,
-                date: "2026-09-18".to_string(),
+                date: d(2026, 9, 18),
             },
             ExtraCost {
                 id: 31,
@@ -2441,7 +2458,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Four new tires".to_string(),
                 price: 640,
-                date: "2026-09-26".to_string(),
+                date: d(2026, 9, 26),
             },
             ExtraCost {
                 id: 32,
@@ -2449,7 +2466,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Interior detail".to_string(),
                 price: 140,
-                date: "2026-10-03".to_string(),
+                date: d(2026, 10, 3),
             },
             ExtraCost {
                 id: 33,
@@ -2457,7 +2474,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Volvo dealer health check".to_string(),
                 price: 190,
-                date: "2026-08-18".to_string(),
+                date: d(2026, 8, 18),
             },
             ExtraCost {
                 id: 34,
@@ -2465,7 +2482,7 @@ fn sample_app_state() -> AppState {
                 title: "Minor repairs".to_string(),
                 description: "Sunroof drain cleaning".to_string(),
                 price: 350,
-                date: "2026-09-02".to_string(),
+                date: d(2026, 9, 2),
             },
             ExtraCost {
                 id: 35,
@@ -2473,7 +2490,7 @@ fn sample_app_state() -> AppState {
                 title: "Battery replacement".to_string(),
                 description: "New battery".to_string(),
                 price: 200,
-                date: "2026-07-01".to_string(),
+                date: d(2026, 7, 1),
             },
             ExtraCost {
                 id: 36,
@@ -2481,7 +2498,7 @@ fn sample_app_state() -> AppState {
                 title: "Interior cleaning".to_string(),
                 description: "Carpet extraction".to_string(),
                 price: 110,
-                date: "2026-07-18".to_string(),
+                date: d(2026, 7, 18),
             },
             ExtraCost {
                 id: 37,
@@ -2489,7 +2506,7 @@ fn sample_app_state() -> AppState {
                 title: "Tire replacement".to_string(),
                 description: "Two new front tires".to_string(),
                 price: 610,
-                date: "2026-08-14".to_string(),
+                date: d(2026, 8, 14),
             },
             ExtraCost {
                 id: 38,
@@ -2497,7 +2514,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Enclosed transport".to_string(),
                 price: 420,
-                date: "2026-10-23".to_string(),
+                date: d(2026, 10, 23),
             },
             ExtraCost {
                 id: 39,
@@ -2505,7 +2522,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Porsche pre-sale inspection".to_string(),
                 price: 350,
-                date: "2026-10-20".to_string(),
+                date: d(2026, 10, 20),
             },
             ExtraCost {
                 id: 40,
@@ -2513,7 +2530,7 @@ fn sample_app_state() -> AppState {
                 title: "Vehicle transportation".to_string(),
                 description: "Flatbed transport".to_string(),
                 price: 480,
-                date: "2026-10-17".to_string(),
+                date: d(2026, 10, 17),
             },
             ExtraCost {
                 id: 41,
@@ -2521,7 +2538,7 @@ fn sample_app_state() -> AppState {
                 title: "Mechanical inspection".to_string(),
                 description: "Pre-sale inspection".to_string(),
                 price: 180,
-                date: "2026-02-26".to_string(),
+                date: d(2026, 2, 26),
             },
         ],
 
@@ -2537,9 +2554,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2025-001".to_string(),
                 inventory_item_id: 25,
                 owner_id: 28,
-                start_date: "2025-09-18".to_string(),
-                end_date: "2025-12-18".to_string(),
-                closed_date: Some("2025-11-20".to_string()),
+                start_date: d(2025, 9, 18),
+                end_date: d(2025, 12, 18),
+                closed_date: Some(d(2025, 11, 20)),
                 minimum_owner_payout: 38000,
                 commission: Commission::FixedAmount { amount: 2000 },
                 status: AgreementStatus::Completed,
@@ -2550,9 +2567,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2025-002".to_string(),
                 inventory_item_id: 28,
                 owner_id: 4,
-                start_date: "2025-10-20".to_string(),
-                end_date: "2026-01-18".to_string(),
-                closed_date: Some("2026-01-18".to_string()),
+                start_date: d(2025, 10, 20),
+                end_date: d(2026, 1, 18),
+                closed_date: Some(d(2026, 1, 18)),
                 minimum_owner_payout: 13000,
                 commission: Commission::Percentage { basis_points: 500 },
                 status: AgreementStatus::Expired,
@@ -2563,9 +2580,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2025-003".to_string(),
                 inventory_item_id: 27,
                 owner_id: 9,
-                start_date: "2025-11-20".to_string(),
-                end_date: "2026-02-20".to_string(),
-                closed_date: Some("2026-01-28".to_string()),
+                start_date: d(2025, 11, 20),
+                end_date: d(2026, 2, 20),
+                closed_date: Some(d(2026, 1, 28)),
                 minimum_owner_payout: 32000,
                 commission: Commission::Percentage { basis_points: 600 },
                 status: AgreementStatus::Completed,
@@ -2576,9 +2593,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2025-004".to_string(),
                 inventory_item_id: 33,
                 owner_id: 21,
-                start_date: "2025-12-03".to_string(),
-                end_date: "2026-03-03".to_string(),
-                closed_date: Some("2026-02-26".to_string()),
+                start_date: d(2025, 12, 3),
+                end_date: d(2026, 3, 3),
+                closed_date: Some(d(2026, 2, 26)),
                 minimum_owner_payout: 33000,
                 commission: Commission::Percentage { basis_points: 550 },
                 status: AgreementStatus::Completed,
@@ -2589,9 +2606,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-001".to_string(),
                 inventory_item_id: 38,
                 owner_id: 27,
-                start_date: "2026-01-22".to_string(),
-                end_date: "2026-04-20".to_string(),
-                closed_date: Some("2026-04-20".to_string()),
+                start_date: d(2026, 1, 22),
+                end_date: d(2026, 4, 20),
+                closed_date: Some(d(2026, 4, 20)),
                 minimum_owner_payout: 30000,
                 commission: Commission::Percentage { basis_points: 600 },
                 status: AgreementStatus::Expired,
@@ -2602,9 +2619,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-002".to_string(),
                 inventory_item_id: 29,
                 owner_id: 12,
-                start_date: "2026-02-12".to_string(),
-                end_date: "2026-05-12".to_string(),
-                closed_date: Some("2026-04-03".to_string()),
+                start_date: d(2026, 2, 12),
+                end_date: d(2026, 5, 12),
+                closed_date: Some(d(2026, 4, 3)),
                 minimum_owner_payout: 32000,
                 commission: Commission::FixedAmount { amount: 1800 },
                 status: AgreementStatus::Completed,
@@ -2615,9 +2632,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-003".to_string(),
                 inventory_item_id: 35,
                 owner_id: 13,
-                start_date: "2026-04-18".to_string(),
-                end_date: "2026-09-18".to_string(),
-                closed_date: Some("2026-07-11".to_string()),
+                start_date: d(2026, 4, 18),
+                end_date: d(2026, 9, 18),
+                closed_date: Some(d(2026, 7, 11)),
                 minimum_owner_payout: 19000,
                 commission: Commission::FixedAmount { amount: 1000 },
                 status: AgreementStatus::Cancelled,
@@ -2628,22 +2645,22 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-004".to_string(),
                 inventory_item_id: 31,
                 owner_id: 18,
-                start_date: "2026-05-06".to_string(),
-                end_date: "2026-08-06".to_string(),
-                closed_date: Some("2026-06-25".to_string()),
+                start_date: d(2026, 5, 6),
+                end_date: d(2026, 8, 6),
+                closed_date: Some(d(2026, 6, 25)),
                 minimum_owner_payout: 26000,
                 commission: Commission::Percentage { basis_points: 500 },
                 status: AgreementStatus::Completed,
             },
-            // Completed: Audi A6, owner 4 (owner 4 also has agreements 2, 14, 15 below). Commission 42900*500/10000 = 2145; payout 40755 >= 38500.
+            // Completed: Audi A6, owner 4. Commission 42900*500/10000 = 2145; payout 40755 >= 38500.
             ConsignmentAgreement {
                 id: 9,
                 agreement_number: "CON-2026-005".to_string(),
                 inventory_item_id: 36,
                 owner_id: 4,
-                start_date: "2026-06-16".to_string(),
-                end_date: "2026-09-16".to_string(),
-                closed_date: Some("2026-08-07".to_string()),
+                start_date: d(2026, 6, 16),
+                end_date: d(2026, 9, 16),
+                closed_date: Some(d(2026, 8, 7)),
                 minimum_owner_payout: 38500,
                 commission: Commission::Percentage { basis_points: 500 },
                 status: AgreementStatus::Completed,
@@ -2654,8 +2671,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-006".to_string(),
                 inventory_item_id: 34,
                 owner_id: 24,
-                start_date: "2026-07-15".to_string(),
-                end_date: "2026-12-15".to_string(),
+                start_date: d(2026, 7, 15),
+                end_date: d(2026, 12, 15),
                 closed_date: None,
                 minimum_owner_payout: 24000,
                 commission: Commission::Percentage { basis_points: 500 },
@@ -2667,9 +2684,9 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-007".to_string(),
                 inventory_item_id: 41,
                 owner_id: 6,
-                start_date: "2026-08-03".to_string(),
-                end_date: "2026-11-03".to_string(),
-                closed_date: Some("2026-10-17".to_string()),
+                start_date: d(2026, 8, 3),
+                end_date: d(2026, 11, 3),
+                closed_date: Some(d(2026, 10, 17)),
                 minimum_owner_payout: 23500,
                 commission: Commission::Percentage { basis_points: 500 },
                 status: AgreementStatus::Completed,
@@ -2680,8 +2697,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-008".to_string(),
                 inventory_item_id: 32,
                 owner_id: 6,
-                start_date: "2026-08-19".to_string(),
-                end_date: "2027-01-19".to_string(),
+                start_date: d(2026, 8, 19),
+                end_date: d(2027, 1, 19),
                 closed_date: None,
                 minimum_owner_payout: 20000,
                 commission: Commission::FixedAmount { amount: 1200 },
@@ -2693,8 +2710,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-009".to_string(),
                 inventory_item_id: 30,
                 owner_id: 15,
-                start_date: "2026-09-08".to_string(),
-                end_date: "2027-02-08".to_string(),
+                start_date: d(2026, 9, 8),
+                end_date: d(2027, 2, 8),
                 closed_date: None,
                 minimum_owner_payout: 16000,
                 commission: Commission::Percentage { basis_points: 700 },
@@ -2706,8 +2723,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-010".to_string(),
                 inventory_item_id: 39,
                 owner_id: 4,
-                start_date: "2026-10-05".to_string(),
-                end_date: "2027-01-05".to_string(),
+                start_date: d(2026, 10, 5),
+                end_date: d(2027, 1, 5),
                 closed_date: None,
                 minimum_owner_payout: 12500,
                 commission: Commission::FixedAmount { amount: 1100 },
@@ -2719,8 +2736,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-011".to_string(),
                 inventory_item_id: 26,
                 owner_id: 4,
-                start_date: "2026-10-09".to_string(),
-                end_date: "2027-01-09".to_string(),
+                start_date: d(2026, 10, 9),
+                end_date: d(2027, 1, 9),
                 closed_date: None,
                 minimum_owner_payout: 15500,
                 commission: Commission::Percentage { basis_points: 500 },
@@ -2732,8 +2749,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-012".to_string(),
                 inventory_item_id: 37,
                 owner_id: 21,
-                start_date: "2026-10-27".to_string(),
-                end_date: "2027-03-27".to_string(),
+                start_date: d(2026, 10, 27),
+                end_date: d(2027, 3, 27),
                 closed_date: None,
                 minimum_owner_payout: 42000,
                 commission: Commission::Percentage { basis_points: 450 },
@@ -2745,8 +2762,8 @@ fn sample_app_state() -> AppState {
                 agreement_number: "CON-2026-013".to_string(),
                 inventory_item_id: 40,
                 owner_id: 15,
-                start_date: "2026-11-12".to_string(),
-                end_date: "2027-02-12".to_string(),
+                start_date: d(2026, 11, 12),
+                end_date: d(2027, 2, 12),
                 closed_date: None,
                 minimum_owner_payout: 14000,
                 commission: Commission::Percentage { basis_points: 500 },
