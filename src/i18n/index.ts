@@ -1,8 +1,9 @@
 import { en } from "./en";
 import { fa } from "./fa";
+import { salesEn, salesFa } from "./sales";
 
 export type Locale = "en" | "fa";
-export type Dictionary = typeof en;
+export type Dictionary = typeof en & typeof salesEn;
 
 /** Dot-path union of all dictionary leaf keys, e.g. "contracts.title". */
 type DictPath<T> = T extends string
@@ -13,7 +14,10 @@ type DictPath<T> = T extends string
 
 export type TKey = DictPath<Dictionary>;
 
-export const dictionaries: Record<Locale, Dictionary> = { en, fa };
+export const dictionaries: Record<Locale, Dictionary> = {
+    en: { ...en, ...salesEn },
+    fa: { ...fa, ...salesFa },
+};
 
 export function translate(dict: Dictionary, key: TKey, params?: Record<string, string>): string {
     let current: unknown = dict;

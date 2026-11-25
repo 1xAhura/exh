@@ -8,6 +8,7 @@ import ContractsPage from "./pages/ContractsPage";
 import DashboardPage from "./pages/DashboardPage";
 import InventoryPage from "./pages/InventoryPage";
 import PeoplePage from "./pages/PeoplePage";
+import SalesPage from "./pages/SalesPage";
 import SettingsPage from "./pages/SettingsPage";
 import type { ModalIntent, PageId } from "./types/nav";
 
@@ -39,6 +40,7 @@ function AppContent() {
             {page === "agreements" && (
                 <AgreementsPage intent={intent} onIntentDone={clearIntent} onNavigate={navigate} />
             )}
+            {page === "sales" && <SalesPage />}
             {page === "settings" && <SettingsPage />}
         </Shell>
     );

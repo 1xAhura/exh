@@ -4,6 +4,7 @@ export type PageId =
     | "people"
     | "contracts"
     | "agreements"
+    | "sales"
     | "settings";
 
 export type ModalIntent = "purchase" | "sale" | "agreement" | "person";

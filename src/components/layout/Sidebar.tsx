@@ -1,4 +1,4 @@
-import { Car, FileText, LayoutDashboard, ScrollText, Settings, Users } from "lucide-react";
+import { BarChart3, Car, FileText, LayoutDashboard, ScrollText, Settings, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 import type { TKey } from "../../i18n";
@@ -15,6 +15,7 @@ const NAV_ITEMS: { id: PageId; labelKey: TKey; icon: LucideIcon }[] = [
     { id: "people", labelKey: "nav.people", icon: Users },
     { id: "contracts", labelKey: "nav.contracts", icon: FileText },
     { id: "agreements", labelKey: "nav.agreements", icon: ScrollText },
+    { id: "sales", labelKey: "navSales", icon: BarChart3 },
 ];
 
 function navButtonClass(active: boolean): string {

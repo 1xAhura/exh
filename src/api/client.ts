@@ -9,6 +9,12 @@ import type {
     InventoryItemResponse,
     Person,
 } from "../types/models";
+import type {
+    GetMonthlySalesPayload,
+    GetYearlySalesPayload,
+    MonthlySalesResponse,
+    YearlySalesResponse,
+} from "../types/sales";
 
 // ── Payload shapes ─────────────────────────────────────────────────────
 // Top-level invoke args are camelCase (Tauri converts them); fields INSIDE
@@ -96,6 +102,15 @@ export const getInventoryDetails = () =>
     invoke<InventoryItemResponse[]>("get_inventory_details");
 export const getInventoryItemDetails = (inventoryItemId: number) =>
     invoke<InventoryItemResponse>("get_inventory_item_details", { inventoryItemId });
+
+// ── Sales statistics ───────────────────────────────────────────────────
+// Both commands return only the days/months that have sales; the UI fills
+// the gaps with zeros. calendar selects how year/month/day are interpreted.
+export const getMonthlySales = (monthlySales: GetMonthlySalesPayload) =>
+    invoke<MonthlySalesResponse>("get_monthly_sales", { monthlySales });
+
+export const getYearlySales = (yearlySales: GetYearlySalesPayload) =>
+    invoke<YearlySalesResponse>("get_yearly_sales", { yearlySales });
 
 // ── Updates & deletes ──────────────────────────────────────────────────
 export const updateCar = (updatedCar: UpdateCarPayload) =>
